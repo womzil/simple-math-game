@@ -1,4 +1,9 @@
-﻿try
+﻿using System.Configuration;
+
+// Settings
+bool randomEquation = Convert.ToBoolean(ConfigurationManager.AppSettings.Get("RandomEquation"));
+
+try
 {
     Console.Clear();
 }
@@ -7,7 +12,7 @@ catch (IOException)
     throw new IOException("Debug console (internal terminal) in VS Code is not supported, please use integrated terminal or external terminal.");
 }
 
-char[] equations = ['+', '-', '/', '*', '^'];
+char[] equations = { '+', '-', '/', '*', '^' };
 Random rand = new Random();
 int score = 0;
 
@@ -63,9 +68,11 @@ void StartGame()
         correctNumber = int.TryParse(userInput, out numberOfRounds);
     }
 
+    char equation = GetEquation();
+    
     for (int i = 1; i <= numberOfRounds; i++)
     {
-        StartRound(i, numberOfRounds);
+        StartRound(equation, i, numberOfRounds);
     }
 
     Console.Clear();
@@ -74,14 +81,13 @@ void StartGame()
     Console.WriteLine();
 }
 
-void StartRound(int numberOfRound, int numberOfRounds)
+void StartRound(char equation, int numberOfRound, int numberOfRounds)
 {
     Console.Clear();
     Console.WriteLine($"Round number {numberOfRound}/{numberOfRounds}");
     Console.WriteLine();
 
     int result;
-    char equation = equations[rand.Next(0, equations.Length)];
     int num1 = rand.Next(1, 101);
     int num2 = rand.Next(1, 101);
 
@@ -140,7 +146,7 @@ void StartRound(int numberOfRound, int numberOfRounds)
 }
 
 ConsoleKey ContinueOrExit(
-    string instructions = "Press \"Enter\" to continue or \"Escape\" to exit.", 
+    string instructions = "Press \"Enter\" to continue or \"Escape\" to exit.",
     string wrongKey = "Wrong key. You need to press \"Enter\" or \"Escape\".")
 {
     Console.WriteLine(instructions);
@@ -156,4 +162,37 @@ ConsoleKey ContinueOrExit(
     }
 
     return key;
+}
+
+char GetEquation()
+{
+    char equation;
+
+    if (randomEquation)
+        equation = equations[rand.Next(0, equations.Length)];
+    else
+    {
+        Console.Clear();
+        Console.WriteLine(
+            "Please, enter the type of equation you want to use in game. You can change that in the settings.");
+        Console.Write("Your choice: ");
+        string userInput = Console.ReadLine();
+        bool correctEquation = char.TryParse(userInput, out equation);
+
+        while (!correctEquation || !equations.Contains(equation))
+        {
+            Console.WriteLine("Incorrect equation! It has to be one of the following:");
+            Console.WriteLine(@"+ - addition
+                            - - subtraction
+* - multiplication
+/ - division
+^ - powering");
+
+            Console.Write("Your choice: ");
+            userInput = Console.ReadLine();
+            correctEquation = char.TryParse(userInput, out equation);
+        }
+    }
+
+    return equation;
 }
