@@ -23,7 +23,7 @@ simple math equations (addition, subtraction, division, multiplication)
 on whole numbers from range 1-100. Results of division also should be whole numbers.");
 Console.WriteLine();
 
-ConsoleKey key = ContinueOrExit("Press \"Enter\" to start playing or \"Escape\" to exit.");
+ConsoleKey key = ContinueOrExit("Press \"Enter\" to start playing or \"Escape\" to exit or \"Tab\" to change the settings.");
 PlayAgainOrLeave();
 
 void PlayAgainOrLeave()
@@ -33,7 +33,15 @@ void PlayAgainOrLeave()
         if (key == ConsoleKey.Enter)
         {
             StartGame();
-            key = ContinueOrExit("Do you wish to play again? Press \"Enter\" to continue or \"Escape\" to exit.");
+            key = ContinueOrExit("Do you wish to play again? Press \"Enter\" to continue or \"Escape\" to exit or \"Tab\" to change the settings.");
+        }
+
+        if (key == ConsoleKey.Tab)
+        {
+            ChangeSettings();
+            Console.Clear();
+            Console.Write("x");
+            key = ContinueOrExit();
         }
 
         if (key == ConsoleKey.Escape)
@@ -48,7 +56,7 @@ void PlayAgainOrLeave()
 
         PlayAgainOrLeave();
 
-    } while (key != ConsoleKey.Enter && key != ConsoleKey.Escape);
+    } while (key != ConsoleKey.Enter && key != ConsoleKey.Escape && key != ConsoleKey.Tab);
 }
 
 void StartGame()
@@ -69,9 +77,12 @@ void StartGame()
     }
 
     char equation = GetEquation();
-    
+
     for (int i = 1; i <= numberOfRounds; i++)
     {
+        if (randomEquation)
+            equation = GetEquation();
+
         StartRound(equation, i, numberOfRounds);
     }
 
@@ -146,14 +157,14 @@ void StartRound(char equation, int numberOfRound, int numberOfRounds)
 }
 
 ConsoleKey ContinueOrExit(
-    string instructions = "Press \"Enter\" to continue or \"Escape\" to exit.",
-    string wrongKey = "Wrong key. You need to press \"Enter\" or \"Escape\".")
+    string instructions = "Press \"Enter\" to continue or \"Escape\" to exit or \"Tab\" to change the settings.",
+    string wrongKey = "Wrong key. You need to press \"Enter\" or \"Escape\" or \"Tab\".")
 {
     Console.WriteLine(instructions);
     ConsoleKey key = Console.ReadKey().Key;
     Console.WriteLine();
 
-    while (key != ConsoleKey.Enter && key != ConsoleKey.Escape)
+    while (key != ConsoleKey.Enter && key != ConsoleKey.Escape && key != ConsoleKey.Tab)
     {
         Console.WriteLine(wrongKey);
         Console.Write("Your input: ");
@@ -182,11 +193,11 @@ char GetEquation()
         while (!correctEquation || !equations.Contains(equation))
         {
             Console.WriteLine("Incorrect equation! It has to be one of the following:");
-            Console.WriteLine(@"+ - addition
-                            - - subtraction
-* - multiplication
-/ - division
-^ - powering");
+            Console.WriteLine("+ - addition");
+            Console.WriteLine("- - subtraction");
+            Console.WriteLine("* - multiplication");
+            Console.WriteLine("/ - division");
+            Console.WriteLine("^ - powering");
 
             Console.Write("Your choice: ");
             userInput = Console.ReadLine();
@@ -195,4 +206,35 @@ char GetEquation()
     }
 
     return equation;
+}
+
+void DisplaySettings()
+{
+    char onOff = randomEquation ? '+' : '-';
+
+    Console.Clear();
+    Console.WriteLine("Here you can change the settings.");
+    Console.WriteLine("Press \"Tab\" to turn a specific setting on/off or \"Escape\" to exit.");
+    Console.WriteLine();
+    Console.Write("({0}) Random equation type", onOff);
+}
+
+void ChangeSettings()
+{
+    DisplaySettings();
+
+    ConsoleKey? switchKey = null;
+
+    while (switchKey is not ConsoleKey.Escape)
+    {
+        switchKey = Console.ReadKey().Key;
+
+        if (switchKey == ConsoleKey.Tab)
+        {
+            randomEquation = !randomEquation;
+            DisplaySettings();
+        }
+    }
+
+    ConfigurationManager.AppSettings.Set("RandomEquation", randomEquation.ToString());
 }
