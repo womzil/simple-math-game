@@ -1,7 +1,5 @@
-﻿using System.Configuration;
+﻿using System.Xml;
 
-// Settings
-bool randomEquation = Convert.ToBoolean(ConfigurationManager.AppSettings.Get("RandomEquation"));
 
 try
 {
@@ -80,7 +78,7 @@ void StartGame()
 
     for (int i = 1; i <= numberOfRounds; i++)
     {
-        if (randomEquation)
+        if (GetSettingValue("RandomEquation"))
             equation = GetEquation();
 
         StartRound(equation, i, numberOfRounds);
@@ -179,7 +177,7 @@ char GetEquation()
 {
     char equation;
 
-    if (randomEquation)
+    if (GetSettingValue("RandomEquation"))
         equation = equations[rand.Next(0, equations.Length)];
     else
     {
@@ -210,7 +208,7 @@ char GetEquation()
 
 void DisplaySettings()
 {
-    char onOff = randomEquation ? '+' : '-';
+    char onOff = GetSettingValue("RandomEquation") ? '+' : '-';
 
     Console.Clear();
     Console.WriteLine("Here you can change the settings.");
@@ -225,16 +223,67 @@ void ChangeSettings()
 
     ConsoleKey? switchKey = null;
 
+    bool settingValue = GetSettingValue("RandomEquation");
+
     while (switchKey is not ConsoleKey.Escape)
     {
         switchKey = Console.ReadKey().Key;
 
         if (switchKey == ConsoleKey.Tab)
         {
-            randomEquation = !randomEquation;
+            settingValue = !settingValue;
             DisplaySettings();
         }
     }
 
-    ConfigurationManager.AppSettings.Set("RandomEquation", randomEquation.ToString());
+    UpdateSettingValue("RandomEquation", settingValue);
+}
+
+XmlDocument GetConfigFile()
+{
+    XmlDocument xmlDoc = new XmlDocument();
+    try
+    {
+        xmlDoc.Load("config.xml");
+        return xmlDoc;
+    }
+    catch (FileNotFoundException)
+    {
+        // Create an XmlDocument
+        xmlDoc = new XmlDocument();
+        xmlDoc.AppendChild(xmlDoc.CreateXmlDeclaration("1.0", "UTF-8", null));
+
+        XmlElement rootElement = xmlDoc.CreateElement("Configuration");
+        xmlDoc.AppendChild(rootElement);
+
+        // Adding settings with their default values
+        XmlElement settingElement = xmlDoc.CreateElement("RandomEquation");
+        settingElement.InnerText = "false";
+        rootElement.AppendChild(settingElement);
+
+        xmlDoc.Save("config.xml");
+        return xmlDoc;
+    }
+}
+
+bool GetSettingValue(string key)
+{
+    XmlDocument xmlDoc = GetConfigFile();
+    xmlDoc.Load("config.xml");
+    XmlNode settingNode = xmlDoc.SelectSingleNode($"/Configuration/{key}");
+
+    if (bool.TryParse(settingNode.InnerText, out bool value))
+        return value;
+    throw new InvalidOperationException("Configuration file could not be found.");
+}
+
+void UpdateSettingValue(string key, bool value)
+{
+    XmlDocument xmlDoc = GetConfigFile();
+    XmlElement rootElement = xmlDoc.CreateElement("Configuration");
+    xmlDoc.AppendChild(rootElement);
+    XmlElement settingElement = xmlDoc.GetElementById(key);
+    settingElement.InnerText = value.ToString();
+    rootElement.AppendChild(settingElement);
+    xmlDoc.Save("config.xml");
 }
