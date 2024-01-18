@@ -6,6 +6,8 @@
     <RootNamespace>simple_math_game</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <Title>Simple Math Game</Title>
+    <NeutralLanguage>en-001</NeutralLanguage>
   </PropertyGroup>
 
 </Project>
