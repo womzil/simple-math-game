@@ -35,7 +35,7 @@ on whole numbers from range 1-100. Results of division also should be whole numb
             playAgain
                 ? "Do you wish to play again?\nPress:\n- \"Enter\" to continue\n- \"L\" to see top scores\n- \"Tab\" to change the settings\n- \"Escape\" to exit"
                 : "Press:\n- \"Enter\" to start playing\n- \"L\" to see top scores\n- \"Tab\" to change the settings\n- \"Escape\" to exit");
-    
+
     if (key == ConsoleKey.Enter)
     {
         StartGame();
@@ -150,7 +150,6 @@ void StartRound(char equation, int numberOfRound, int numberOfRounds)
     Console.WriteLine($"Round number {numberOfRound}/{numberOfRounds}\tScore: {score} [{percentage:P}]");
     Console.WriteLine();
 
-    int result;
     int num1 = rand.Next(1, 101);
     int num2 = rand.Next(1, 101);
 
@@ -166,7 +165,7 @@ void StartRound(char equation, int numberOfRound, int numberOfRounds)
         num2 = rand.Next(1, 101);
     }
 
-    result = equation switch
+    int result = equation switch
     {
         '+' => num1 + num2,
         '-' => num1 - num2,
@@ -231,25 +230,33 @@ void DisplayLeaderboard()
         'R' => "Random",
         _ => throw new InvalidDataException("Wrong equation type."),
     };
-    List<Game> gamesCurrentGameMode = games.FindAll(FindGamesWithCurrentGameMode);
+
+    List<Game> gamesCurrentGameMode =
+    [
+        ..
+            from game in games
+            where game.GameMode == modes[currentLeaderboardModeIndex]
+            orderby (float)game.Score / game.Rounds descending
+            select game
+        ,
+    ];
+
     Console.Clear();
     Console.WriteLine($"Top scores - {mode}");
     Console.WriteLine("You can change the mode using arrows (left/right) or A/D.");
     Console.WriteLine();
 
     if (gamesCurrentGameMode.Count == 0)
+    {
         Console.WriteLine("No games played yet in this mode!");
+        return;
+    }
 
     for (int i = 0; i < gamesCurrentGameMode.Count; i++)
     {
         float percentage = (float)gamesCurrentGameMode[i].Score / gamesCurrentGameMode[i].Rounds;
         Console.WriteLine($"{i + 1}. {gamesCurrentGameMode[i].PlayerName} - {gamesCurrentGameMode[i].Score}/{gamesCurrentGameMode[i].Rounds} [{percentage:P}]");
     }
-}
-
-bool FindGamesWithCurrentGameMode(Game game)
-{
-    return game.GameMode == modes[currentLeaderboardModeIndex];
 }
 
 ConsoleKey GetKey(
