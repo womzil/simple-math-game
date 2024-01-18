@@ -1,5 +1,7 @@
-﻿using System.Xml;
-
+﻿using System.Diagnostics;
+using System.Drawing;
+using System.Text.Json;
+using System.Xml;
 
 try
 {
@@ -11,51 +13,80 @@ catch (IOException)
 }
 
 char[] equations = { '+', '-', '/', '*', '^' };
+char[] modes = new char[equations.Length + 1];
+Array.Copy(equations, modes, equations.Length);
+modes[^1] = 'R';
+
 Random rand = new Random();
+List<Game> games = new List<Game>();
 int score = 0;
+int currentLeaderboardModeIndex = 0;
 
-Console.WriteLine("Welcome to Simple Math Game, created by womzil.");
-Console.WriteLine();
-Console.WriteLine(@"In this game, you have to guess results of some 
-simple math equations (addition, subtraction, division, multiplication)
-on whole numbers from range 1-100. Results of division also should be whole numbers.");
-Console.WriteLine();
-
-ConsoleKey key = ContinueOrExit("Press \"Enter\" to start playing or \"Escape\" to exit or \"Tab\" to change the settings.");
-PlayAgainOrLeave();
-
-void PlayAgainOrLeave()
+bool exit = false;
+bool playAgain = false;
+while (!exit)
 {
-    do
+    Console.Clear();
+    Console.WriteLine("Welcome to Simple Math Game, created by womzil.");
+    Console.WriteLine();
+    Console.WriteLine(@"In this game, you have to guess results of some 
+simple math equations (addition, subtraction, division, multiplication, powering)
+on whole numbers from range 1-100. Results of division also should be whole numbers.");
+    Console.WriteLine();
+    ConsoleKey key = GetKey(
+            playAgain
+                ? "Do you wish to play again?\nPress:\n- \"Enter\" to continue\n- \"L\" to see top scores\n- \"Tab\" to change the settings\n- \"Escape\" to exit"
+                : "Press:\n- \"Enter\" to start playing\n- \"L\" to see top scores\n- \"Tab\" to change the settings\n- \"Escape\" to exit");
+    
+    if (key == ConsoleKey.Enter)
     {
-        if (key == ConsoleKey.Enter)
-        {
-            StartGame();
-            key = ContinueOrExit("Do you wish to play again? Press \"Enter\" to continue or \"Escape\" to exit or \"Tab\" to change the settings.");
-        }
+        StartGame();
+        playAgain = true;
+    }
 
-        if (key == ConsoleKey.Tab)
-        {
-            ChangeSettings();
-            Console.Clear();
-            Console.Write("x");
-            key = ContinueOrExit();
-        }
+    if (key == ConsoleKey.L)
+    {
+        DisplayLeaderboard();
 
+        ConsoleKey leaderboardKey = Console.ReadKey().Key;
+        while (leaderboardKey != ConsoleKey.Escape)
+        {
+            if (leaderboardKey == ConsoleKey.LeftArrow || leaderboardKey == ConsoleKey.A)
+                currentLeaderboardModeIndex++;
+            else if (leaderboardKey == ConsoleKey.RightArrow || leaderboardKey == ConsoleKey.D)
+                currentLeaderboardModeIndex--;
+
+            if (currentLeaderboardModeIndex >= modes.Length)
+                currentLeaderboardModeIndex = 0;
+            else if (currentLeaderboardModeIndex < 0)
+                currentLeaderboardModeIndex = modes.Length - 1;
+
+            DisplayLeaderboard();
+
+            leaderboardKey = Console.ReadKey().Key;
+        }
+        Console.Write("x");
+        continue;
+    }
+
+    if (key == ConsoleKey.Tab)
+    {
+        ChangeSettings();
+        continue;
+    }
+
+    if (key == ConsoleKey.Escape)
+    {
+        key = GetKey("xAre you sure? Press \"Escape\" again to confirm or \"Enter\" to cancel.");
         if (key == ConsoleKey.Escape)
         {
-            key = ContinueOrExit("xAre you sure? Press \"Escape\" again to confirm or \"Enter\" to play again.");
-            if (key == ConsoleKey.Escape)
-            {
-                Console.WriteLine("xLeaving...");
-                break;
-            }
+            Console.WriteLine("xLeaving...");
+            exit = true;
         }
-
-        PlayAgainOrLeave();
-
-    } while (key != ConsoleKey.Enter && key != ConsoleKey.Escape && key != ConsoleKey.Tab);
+    }
 }
+
+return 0;
 
 void StartGame()
 {
@@ -84,16 +115,41 @@ void StartGame()
         StartRound(equation, i, numberOfRounds);
     }
 
+    float percentage = (float)score / numberOfRounds;
     Console.Clear();
     Console.WriteLine("Game completed!");
-    Console.WriteLine($"Your score: {score}/{numberOfRounds}.");
+    Console.WriteLine($"Your score: {score}/{numberOfRounds} [{percentage:P}].");
     Console.WriteLine();
+
+    string? userName = null;
+    while (string.IsNullOrEmpty(userName))
+    {
+        Console.Write("Please, enter your name: ");
+        userName = Console.ReadLine();
+
+        if (string.IsNullOrEmpty(userName))
+            Console.WriteLine("You have to input your name!");
+    }
+
+    games.Add(new Game
+    {
+        PlayerName = userName,
+        GameMode = GetSettingValue("RandomEquation") ? 'R' : equation,
+        Score = score,
+        Rounds = numberOfRounds,
+        Time = DateTime.Now
+    });
+    string fileName = "TopScores.json";
+    string jsonString = JsonSerializer.Serialize(games, new JsonSerializerOptions { WriteIndented = true });
+    File.WriteAllText(fileName, jsonString);
+    score = 0;
 }
 
 void StartRound(char equation, int numberOfRound, int numberOfRounds)
 {
+    float percentage = (float)score / numberOfRound;
     Console.Clear();
-    Console.WriteLine($"Round number {numberOfRound}/{numberOfRounds}");
+    Console.WriteLine($"Round number {numberOfRound}/{numberOfRounds}\tScore: {score} [{percentage:P}]");
     Console.WriteLine();
 
     int result;
@@ -112,26 +168,16 @@ void StartRound(char equation, int numberOfRound, int numberOfRounds)
         num2 = rand.Next(1, 101);
     }
 
-    switch (equation)
+    result = equation switch
     {
-        case '+':
-            result = num1 + num2;
-            break;
-        case '-':
-            result = num1 - num2;
-            break;
-        case '/':
-            result = num1 / num2;
-            break;
-        case '*':
-            result = num1 * num2;
-            break;
-        case '^':
-            result = (int)Math.Pow(num1, num2);
-            break;
-        default:
-            throw new ArithmeticException("The program tried to access nonexistent type of equation in \"equations\" array.");
-    }
+        '+' => num1 + num2,
+        '-' => num1 - num2,
+        '/' => num1 / num2,
+        '*' => num1 * num2,
+        '^' => (int)Math.Pow(num1, num2),
+        _ => throw new ArithmeticException(
+            "The program tried to access nonexistent type of equation in \"equations\" array.")
+    };
 
     Console.Write($"{num1} {equation} {num2} = ");
 
@@ -146,25 +192,79 @@ void StartRound(char equation, int numberOfRound, int numberOfRounds)
     if (userAnswer == result)
     {
         score++;
-        Console.WriteLine($"Correct answer! Your score is {score} now!");
+
+        Console.BackgroundColor = ConsoleColor.Green;
+        Console.ForegroundColor = ConsoleColor.White;
+        Console.Write(" \u2713 "); //Check mark
+        Console.ResetColor();
+        Console.WriteLine($" Correct answer!");
+        Console.WriteLine($"Your score is {score} now!");
     }
     else
-        Console.WriteLine($"Wrong asnwer! The correct answer is {result}.");
+    {
+        Console.BackgroundColor = ConsoleColor.Red;
+        Console.ForegroundColor = ConsoleColor.White;
+        Console.Write(" X ");
+        Console.ResetColor();
+        Console.WriteLine($" Wrong answer! The correct answer is {result}.");
+        Console.WriteLine($"Your score is still {score}.");
+    }
 
-    ContinueOrExit();
+    Console.WriteLine();
+    Console.WriteLine("Press any key to continue.");
+    Console.ReadKey();
 }
 
-ConsoleKey ContinueOrExit(
-    string instructions = "Press \"Enter\" to continue or \"Escape\" to exit or \"Tab\" to change the settings.",
-    string wrongKey = "Wrong key. You need to press \"Enter\" or \"Escape\" or \"Tab\".")
+void DisplayLeaderboard()
+{
+    try
+    {
+        games = JsonSerializer.Deserialize<List<Game>>(File.ReadAllText("TopScores.json"))!;
+    }
+    catch (IOException) { }
+
+    string mode = modes[currentLeaderboardModeIndex] switch
+    {
+        '+' => "Addition",
+        '-' => "Subtraction",
+        '*' => "Multiplication",
+        '/' => "Division",
+        '^' => "Powering",
+        'R' => "Random",
+        _ => throw new InvalidDataException("Wrong equation type."),
+    };
+    List<Game> gamesCurrentGameMode = games.FindAll(FindGamesWithCurrentGameMode);
+    Console.Clear();
+    Console.WriteLine($"Top scores - {mode}");
+    Console.WriteLine("You can change the mode using arrows (left/right) or A/D.");
+    Console.WriteLine();
+
+    if (gamesCurrentGameMode.Count == 0)
+        Console.WriteLine("No games played yet in this mode!");
+
+    for (int i = 0; i < gamesCurrentGameMode.Count; i++)
+    {
+        float percentage = (float)gamesCurrentGameMode[i].Score / gamesCurrentGameMode[i].Rounds;
+        Console.WriteLine($"{i + 1}. {gamesCurrentGameMode[i].PlayerName} - {gamesCurrentGameMode[i].Score}/{gamesCurrentGameMode[i].Rounds} [{percentage:P}]");
+    }
+}
+
+bool FindGamesWithCurrentGameMode(Game game)
+{
+    return game.GameMode == modes[currentLeaderboardModeIndex];
+}
+
+ConsoleKey GetKey(
+    string instructions = "Press \"Enter\" to continue.",
+    string wrongKeyMessage = "Wrong key. You need to press \"Enter\".")
 {
     Console.WriteLine(instructions);
     ConsoleKey key = Console.ReadKey().Key;
     Console.WriteLine();
 
-    while (key != ConsoleKey.Enter && key != ConsoleKey.Escape && key != ConsoleKey.Tab)
+    while (key != ConsoleKey.Enter && key != ConsoleKey.Escape && key != ConsoleKey.L && key != ConsoleKey.Tab)
     {
-        Console.WriteLine(wrongKey);
+        Console.WriteLine(wrongKeyMessage);
         Console.Write("Your input: ");
         key = Console.ReadKey().Key;
         Console.WriteLine();
@@ -292,4 +392,14 @@ void UpdateSettingValue(string key, bool value)
     {
         throw new InvalidOperationException("Could not find that key in the config.");
     }
+}
+
+// Game object used for storing scores
+public class Game
+{
+    public string PlayerName { get; set; }
+    public int Score { get; set; }
+    public int Rounds { get; set; }
+    public char GameMode { get; set; }
+    public DateTime Time { get; set; }
 }
