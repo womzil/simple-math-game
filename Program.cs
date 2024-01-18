@@ -232,11 +232,10 @@ void ChangeSettings()
         if (switchKey == ConsoleKey.Tab)
         {
             settingValue = !settingValue;
+            UpdateSettingValue("RandomEquation", settingValue);
             DisplaySettings();
         }
     }
-
-    UpdateSettingValue("RandomEquation", settingValue);
 }
 
 XmlDocument GetConfigFile()
@@ -280,10 +279,17 @@ bool GetSettingValue(string key)
 void UpdateSettingValue(string key, bool value)
 {
     XmlDocument xmlDoc = GetConfigFile();
-    XmlElement rootElement = xmlDoc.CreateElement("Configuration");
-    xmlDoc.AppendChild(rootElement);
-    XmlElement settingElement = xmlDoc.GetElementById(key);
-    settingElement.InnerText = value.ToString();
-    rootElement.AppendChild(settingElement);
-    xmlDoc.Save("config.xml");
+
+    // Edit or add a setting
+    XmlNode settingNode = xmlDoc.SelectSingleNode($"/Configuration/{key}");
+
+    if (settingNode != null)
+    {
+        settingNode.InnerText = value.ToString();
+        xmlDoc.Save("config.xml");
+    }
+    else
+    {
+        throw new InvalidOperationException("Could not find that key in the config.");
+    }
 }
