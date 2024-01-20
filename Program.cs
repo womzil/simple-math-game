@@ -32,9 +32,9 @@ simple math equations (addition, subtraction, division, multiplication, powering
 on whole numbers from range 1-100. Results of division also should be whole numbers.");
     Console.WriteLine();
     ConsoleKey key = GetKey(
-            playAgain
-                ? "Do you wish to play again?\nPress:\n- \"Enter\" to continue\n- \"L\" to see top scores\n- \"Tab\" to change the settings\n- \"Escape\" to exit"
-                : "Press:\n- \"Enter\" to start playing\n- \"L\" to see top scores\n- \"Tab\" to change the settings\n- \"Escape\" to exit");
+        playAgain
+            ? "Do you wish to play again?\nPress:\n- \"Enter\" to continue\n- \"L\" to see top scores\n- \"Tab\" to change the settings\n- \"Escape\" to exit"
+            : "Press:\n- \"Enter\" to start playing\n- \"L\" to see top scores\n- \"Tab\" to change the settings\n- \"Escape\" to exit");
 
     if (key == ConsoleKey.Enter)
     {
@@ -346,12 +346,12 @@ void ChangeSettings()
 XmlDocument GetConfigFile()
 {
     XmlDocument xmlDoc = new XmlDocument();
-    try
+    if (File.Exists("config.xml"))
     {
         xmlDoc.Load("config.xml");
         return xmlDoc;
     }
-    catch (FileNotFoundException)
+    else
     {
         // Create an XmlDocument
         xmlDoc = new XmlDocument();
